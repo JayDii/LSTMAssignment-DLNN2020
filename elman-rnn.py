@@ -262,6 +262,8 @@ if option == 'train':
         if p + seq_length + 1 >= data_length or n == 0:
             hprev = np.zeros((hidden_size, batch_size))  # reset RNN memory
             p = 0  # go back to start of data
+            if n != 0:
+                break
 
         inputs = cut_stream[:, p:p + seq_length]
         targets = cut_stream[:, p + 1:p + 1 + seq_length]
