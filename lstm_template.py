@@ -15,9 +15,12 @@ def sigmoid(x):
 def dsigmoid(y):
     return y * (1 - y)
 
+# not needed. included in np
+#def tanh(x):
+#    return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 
-def dtanh(x):
-    return 1 - x * x
+def dtanh(y):
+    return 1 - y * y
 
 
 # The numerically stable softmax implementation
@@ -77,13 +80,14 @@ cut_stream = np.reshape(cut_stream, (batch_size, -1))
 
 def forward(inputs, targets, memory):
     """
-    inputs,targets are both list of integers.
+    inputs,targets are both lists of integers.
     hprev is Hx1 array of initial hidden state
     returns the loss, gradients on model parameters, and last hidden state
     """
-    hprev, cprev = memory
+    hprev, cprev = memory # memory = (hprev, cprev)
     xs, wes, hs, ys, ps, cs, zs, ins, c_s, ls = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
     os, fs = {}, {}
+    outs = {} # added by me probably you wanted ys for that? then name it consistently in elman and here!
     hs[-1] = np.copy(hprev)
     cs[-1] = np.copy(cprev)
 
@@ -105,36 +109,50 @@ def forward(inputs, targets, memory):
 
         # compute the forget gate
         # f = sigmoid(Wf * z + bf)
+        fs[t] = sigmoid(np.dot(Wf, zs[t]) + bf)
 
         # compute the input gate
         # i = sigmoid(Wi * z + bi)
+        ins[t] = sigmoid(np.dot(Wi, zs[t]) + bi)
         # compute the candidate memory
         # c_ = tanh(Wc * z + bc)
+        c_s[t] = np.tanh(np.dot(Wc, zs[t]) + bc)
 
         # new memory: applying forget gate on the previous memory
         # and then adding the input gate on the candidate memory
-        # c_t = f * c_(t-1) + i * c_
+        # c_t = f * c(t-1) + i * c_ # changed for forget-gate from canidate c_ to actual memory c... because stupid
+        cs[t] = np.dot(fs[t].T, cs[t-1]) +  np.dot(ins[t].T, c_s[t])
+
+        ### ????? how to transpose here?
 
         # output gate
         #o = sigmoid(Wo * z + bo)
+        os[t] = sigmoid(np.dot(Wo, zs[t]) + bo)
+
+        # ??? (missing in template?) hidden state update:
+        #h_t = o_t * tanh(c_t) # probably
+        hs[t] = np.dot(os[t], np.tanh(cs[t]))
 
         # DONE LSTM
-        # output layer - softmax and cross-entropy loss
-        # unnormalized log probabilities for next chars
-        # softmax for probabilities for next chars
 
+        # output layer - softmax and cross-entropy loss:
+        # unnormalized log probabilities for next chars
+        ys[t] = np.dot(Why, hs[t]) + by
+
+        # softmax for probabilities for next chars
+        ps[t] = softmax(ys[t])
 
         # label
         ls[t] = np.zeros((vocab_size, batch_size))
         for b in range(batch_size):
             ls[t][targets[t][b]][b] = 1
 
-        # cross-entropy loss
+        # cross-entropy loss at time t
         loss_t = np.sum(-np.log(ps[t]) * ls[t])
         loss += loss_t
         # loss += -np.log(ps[t][targets[t],0])
 
-    # activations = ()
+    activations = (xs, wes, hs, ys, ps, cs, zs, ins, c_s, ls, os, fs)
     memory = (hs[input_length - 1], cs[input_length -1])
 
     return loss, activations, memory
