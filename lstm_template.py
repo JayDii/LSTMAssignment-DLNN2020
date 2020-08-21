@@ -87,7 +87,7 @@ def forward(inputs, targets, memory):
     hprev, cprev = memory # memory = (hprev, cprev)
     xs, wes, hs, ys, ps, cs, zs, ins, c_s, ls = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
     os, fs = {}, {}
-    outs = {} # added by me probably you wanted ys for that? then name it consistently in elman and here!
+    # outs = {} # added by me probably you wanted ys for that? then name it consistently in elman and here!
     hs[-1] = np.copy(hprev)
     cs[-1] = np.copy(cprev)
 
@@ -121,7 +121,7 @@ def forward(inputs, targets, memory):
         # new memory: applying forget gate on the previous memory
         # and then adding the input gate on the candidate memory
         # c_t = f * c(t-1) + i * c_ # changed for forget-gate from canidate c_ to actual memory c... because stupid
-        cs[t] = np.dot(fs[t].T, cs[t-1]) +  np.dot(ins[t].T, c_s[t])
+        cs[t] = fs[t] * cs[t-1] +  ins[t] * c_s[t]
 
         ### ????? how to transpose here?
 
@@ -176,6 +176,27 @@ def backward(activations, clipping=True):
     # back propagation through time starts here
     for t in reversed(range(input_length)):
         # computing the gradients here
+
+        # as in elman-rnn scipping derivative of loss to softmax dL/dp 
+        #dL_dp = - ls[t] / ps[t]
+        # and calculating directly the derivative of the loss to the output dL/dy
+        dL_dy = ps[t] -  ls[t]
+
+        #scaling??? what's that actually for? => somehow lessen the impact of each run of a batch (=32 runs) on the error update
+        scale = False
+        bsz = dhnext.shape[-1] # 32
+        if scale:
+            dL_dy = dL_dy / bsz
+
+        # from output to hidden layer
+        dWhy += np.dot(dL_dy, hs[t].T) # (p - l) * h
+        dby += np.sum(dL_dy, axis=-1, keepdims=True) # (p-l) the sum is just for the batches...
+
+        # let's propagate through the hidden layer
+        dhnext = np.dot(Why.T, dL_dy) + dhnext # = dL_dh
+        
+
+
 
     # clip to mitigate exploding gradients
     if clipping:

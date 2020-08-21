@@ -190,14 +190,14 @@ def backward(activations, clipping=True, scale=True):
 
         # backprop through the activation function (tanh)
         dtanh_h = 1 - hs[t] * hs[t]
-        dh_pre_activation = dtanh_h * dh  # because h = tanh(h_pre_activation)
+        dh_pre_activation = dtanh_h * dh  # because h = tanh(h_pre_activation) # = dL_d(h_pre_activation)
 
         # next, since  H = tanh ( Wh . H + Wx . x + bh )
         # we use dh to backprop to dWh and dWx
 
         # gradient of the bias and weight, this is similar to dby and dWhy
         # for the H term
-        dbh += np.sum(dh_pre_activation, axis=-1, keepdims=True)
+        dbh += np.sum(dh_pre_activation, axis=-1, keepdims=True) # sum due to minibatch-training
         dWhh += np.dot(dh_pre_activation, hs[t - 1].T)
         # we need this term for the recurrent connection (previous bptt step needs this)
         dh = np.dot(Whh.T, dh_pre_activation)
