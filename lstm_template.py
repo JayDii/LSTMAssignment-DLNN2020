@@ -131,7 +131,7 @@ def forward(inputs, targets, memory):
 
         # ??? (missing in template?) hidden state update:
         #h_t = o_t * tanh(c_t) # probably
-        hs[t] = np.dot(os[t], np.tanh(cs[t]))
+        hs[t] = os[t] * np.tanh(cs[t])
 
         # DONE LSTM
 
