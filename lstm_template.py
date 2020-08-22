@@ -175,6 +175,8 @@ def backward(activations, clipping=True):
     for t in reversed(range(input_length)):
         # computing the gradients here
 
+        dz = np.zeros_like(zs[0])
+
         # === starting here
         # as in elman-rnn scipping derivative of loss to softmax dL/dp 
         #dL_dp = - ls[t] / ps[t]
@@ -197,22 +199,58 @@ def backward(activations, clipping=True):
         ## derivative through hiddenstate h_t 
         # derive memory cell
         dL_dc = dhnext * os[t] * dtanh(cs[t])
-
+        dcnext = dL_dc + dcnext
         # derive to outputgate
         dL_do = dhnext * np.tanh(cs[t])
 
         ## derive through outputgate
-        # derive weight matrix
-        dWo += dL_do * zs[t]
+        # 1. activation function
+        d_pre_o = dL_do * os[t] * (1 - os[t])
+        # 2. derive weight matrix
+        dWo += np.dot(d_pre_o, zs[t].T)
+        # 3. derive bias
+        dbo += np.sum(d_pre_o, axis=-1, keepdims=True) # the sum is just for the batches...
+        # 4. derive z for further derivation
+        dz += np.dot(Wo.T, d_pre_o)
 
-        # derive after bias
-        dbo += np.sum(dL_do, axis=-1, keepdims=True) # the sum is just for the batches...
+        ## derive through the memory
+        # 1. derive for insert gate
+        dL_di = dcnext * c_s[t]
+        # 2. derive for content candidate
+        dL_dc = dcnext * ins[t]
+        # 3. derive for forget gate
+        dL_df = dcnext * cs[t-1]
+        # 4. derive for memory c_t-1
+        dcnext = dcnext * fs[t]
 
+        ## derive through insert gate
+        # 1. activation function
+        # 2. weight matrix
+        # 3. bias
+        # 4. for z_t
 
+        ## derive through content candidate
+        # 1. activation function
+        # 2. weight matrix
+        # 3. bias
+        # 4. for z_t
 
+        ## derive through forget gate
+        # 1. activation function
+        # 2. weight matrix
+        # 3. bias
+        # 4. for z_t
+        #dz += ...
 
+        ## deconcatenate z
+        # 1.gradient h
+        # dhnext updaten ???
+        # 2. gradient wes (dwes)
+        # dL_dwes = hinterer teil von dz (dL_dz)
 
-        
+        ## derive through embedding
+        # 1. weight matrix Wex
+
         # === end
 
 
