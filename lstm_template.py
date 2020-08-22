@@ -182,7 +182,7 @@ def backward(activations, clipping=True):
         dL_dy = ps[t] -  ls[t]
 
         #scaling??? what's that actually for? => somehow lessen the impact of each run of a batch (=32 runs) on the error update
-        scale = False
+        scale = True
         bsz = dhnext.shape[-1] # 32
         if scale:
             dL_dy = dL_dy / bsz
@@ -193,6 +193,7 @@ def backward(activations, clipping=True):
 
         # let's propagate through the hidden layer
         dhnext = np.dot(Why.T, dL_dy) + dhnext # = dL_dh
+
         
         # === end
 
