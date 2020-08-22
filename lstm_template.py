@@ -194,6 +194,24 @@ def backward(activations, clipping=True):
         # let's propagate through the hidden layer
         dhnext = np.dot(Why.T, dL_dy) + dhnext # = dL_dh
 
+        ## derivative through hiddenstate h_t 
+        # derive memory cell
+        dL_dc = dhnext * os[t] * dtanh(cs[t])
+
+        # derive to outputgate
+        dL_do = dhnext * np.tanh(cs[t])
+
+        ## derive through outputgate
+        # derive weight matrix
+        dWo += dL_do * zs[t]
+
+        # derive after bias
+        dbo += np.sum(dL_do, axis=-1, keepdims=True) # the sum is just for the batches...
+
+
+
+
+
         
         # === end
 
