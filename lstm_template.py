@@ -123,8 +123,6 @@ def forward(inputs, targets, memory):
         # c_t = f * c(t-1) + i * c_ # changed for forget-gate from canidate c_ to actual memory c... because stupid
         cs[t] = fs[t] * cs[t-1] +  ins[t] * c_s[t]
 
-        ### ????? how to transpose here?
-
         # output gate
         #o = sigmoid(Wo * z + bo)
         os[t] = sigmoid(np.dot(Wo, zs[t]) + bo)
@@ -177,6 +175,7 @@ def backward(activations, clipping=True):
     for t in reversed(range(input_length)):
         # computing the gradients here
 
+        # === starting here
         # as in elman-rnn scipping derivative of loss to softmax dL/dp 
         #dL_dp = - ls[t] / ps[t]
         # and calculating directly the derivative of the loss to the output dL/dy
@@ -195,7 +194,7 @@ def backward(activations, clipping=True):
         # let's propagate through the hidden layer
         dhnext = np.dot(Why.T, dL_dy) + dhnext # = dL_dh
         
-
+        # === end
 
 
     # clip to mitigate exploding gradients
