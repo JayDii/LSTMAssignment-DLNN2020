@@ -8,7 +8,7 @@ from random import uniform
 import sys
 
 ###
-np.seterr(all='warn')
+# np.seterr(all='warn')
 ###
 
 
