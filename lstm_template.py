@@ -183,29 +183,29 @@ def backward(activations, clipping=True):
         # and calculating directly the derivative of the loss to the output dL/dy
         dL_dy = ps[t] -  ls[t]
 
-        #scaling??? what's that actually for? => somehow lessen the impact of each run of a batch (=32 runs) on the error update
+        #scaling??? what's that actually for? => somehow lessen the impact of each run of a mini-batch (=32 runs) on the error update
         scale = True
         bsz = dhnext.shape[-1] # 32
         if scale:
             dL_dy = dL_dy / bsz
 
-        # from output to hidden layer
+        # through the output layer
+        # 1. weight matrix
         dWhy += np.dot(dL_dy, hs[t].T) # (p - l) * h
+        # 2. bias
         dby += np.sum(dL_dy, axis=-1, keepdims=True) # (p-l) the sum is just for the batches...
-
-        # let's propagate through the hidden layer
-        dhnext = np.dot(Why.T, dL_dy) + dhnext # = dL_dh
+        # 3. derive for h to further propagate the error
+        dhnext = np.dot(Why.T, dL_dy) + dhnext # = dL/ dh_t = dL_t / dh_t + \sum dL_{t>t} / dh_t
 
         ## derivative through hiddenstate h_t 
-        # derive memory cell
-        dL_dc = dhnext * os[t] * dtanh(cs[t])
-        dcnext = dL_dc + dcnext
-        # derive to outputgate
+        # 1. derive for outputgate to propagate error
         dL_do = dhnext * np.tanh(cs[t])
+        # derive memory cell to propagate error
+        dcnext = dhnext * os[t] * dtanh(cs[t]) + dcnext
 
         ## derive through outputgate
         # 1. activation function
-        d_pre_o = dL_do * os[t] * (1 - os[t])
+        d_pre_o = dL_do * os[t] * (1 - os[t]) # = dL_do * dsigmoid(os[t])
         # 2. derive weight matrix
         dWo += np.dot(d_pre_o, zs[t].T)
         # 3. derive bias
@@ -213,11 +213,11 @@ def backward(activations, clipping=True):
         # 4. derive z for further derivation
         dz += np.dot(Wo.T, d_pre_o)
 
-        ## derive through the memory
+        ## derive through the memory to propagate eror
         # 1. derive for insert gate
         dL_di = dcnext * c_s[t]
         # 2. derive for content candidate
-        dL_dc = dcnext * ins[t]
+        dL_dc_ = dcnext * ins[t]
         # 3. derive for forget gate
         dL_df = dcnext * cs[t-1]
         # 4. derive for memory c_t-1
@@ -225,22 +225,35 @@ def backward(activations, clipping=True):
 
         ## derive through insert gate
         # 1. activation function
+        d_pre_i = dL_di * dsigmoid(ins[t])
         # 2. weight matrix
+        dWi += np.dot(d_pre_i, zs[t].T)
         # 3. bias
+        dbi += np.sum(d_pre_i, axis=-1, keepdims=True)
         # 4. for z_t
+        dz += np.dot(Wi.T, d_pre_i)
+
 
         ## derive through content candidate
         # 1. activation function
+        d_pre_c_ = dL_dc_ * dtanh(c_s[t])
         # 2. weight matrix
+        dWc += np.dot(d_pre_c_, zs[t].T)
         # 3. bias
+        dbi += np.sum(d_pre_c, axis=-1, keepdims=True)
         # 4. for z_t
+        dz += np.dot(Wc.T, d_pre_c_)
 
         ## derive through forget gate
         # 1. activation function
+        d_pre_f = dL_df * dsigmoid(fs[t])
         # 2. weight matrix
+        dWf += np.dot(d_pre_f, zs[t].T)
         # 3. bias
+        dbf += np.sum(d_pre_f, axis=-1, keepdims=True)
         # 4. for z_t
-        #dz += ...
+        dz += np.dot(Wf.T, d_pre_f)
+        # => dz = dL/dpre_o * dpre_o/dz +  dL/dpre_i * dpre_i/dz +  dL/dpre_c_ * dpre_c_/dz +  dL/dpre_f * dpre_f/dz
 
         ## deconcatenate z
         # 1.gradient h
