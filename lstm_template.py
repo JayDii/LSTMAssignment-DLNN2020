@@ -240,7 +240,7 @@ def backward(activations, clipping=True):
         # 2. weight matrix
         dWc += np.dot(d_pre_c_, zs[t].T)
         # 3. bias
-        dbi += np.sum(d_pre_c, axis=-1, keepdims=True)
+        dbc += np.sum(d_pre_c_, axis=-1, keepdims=True)
         # 4. for z_t
         dz += np.dot(Wc.T, d_pre_c_)
 
@@ -256,13 +256,14 @@ def backward(activations, clipping=True):
         # => dz = dL/dpre_o * dpre_o/dz +  dL/dpre_i * dpre_i/dz +  dL/dpre_c_ * dpre_c_/dz +  dL/dpre_f * dpre_f/dz
 
         ## deconcatenate z
-        # 1.gradient h
-        # dhnext updaten ???
+        # 1.gradient h: update dhnext for next time-iteration (backward). Meaning set it to dL/dh_{t-1}
+        dhnext = np.vsplit(dz, np.array([hidden_size]))[0]
         # 2. gradient wes (dwes)
-        # dL_dwes = hinterer teil von dz (dL_dz)
+        dL_dwes = np.vsplit(dz, np.array([hidden_size]))[1]
 
         ## derive through embedding
         # 1. weight matrix Wex
+        dWex += np.dot(dL_dwes, xs[t].T)
 
         # === end
 
@@ -270,7 +271,7 @@ def backward(activations, clipping=True):
     # clip to mitigate exploding gradients
     if clipping:
         for dparam in [dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby]:
-            np.clip(dparam, -5, 5, out=dparam)
+            np.clip(dparam, -1, 1, out=dparam)
 
     gradients = (dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby)
 
@@ -279,9 +280,9 @@ def backward(activations, clipping=True):
 
 def sample(memory, seed_ix, n):
     """
-  sample a sequence of integers from the model
-  h is memory state, seed_ix is seed letter for first time step
-  """
+    sample a sequence of integers from the model
+    h is memory state, seed_ix is seed letter for first time step
+    """
     h, c = memory
     x = np.zeros((vocab_size, 1))
     x[seed_ix] = 1
@@ -289,8 +290,22 @@ def sample(memory, seed_ix, n):
     for t in range(n):
 
         # forward pass again, but we do not have to store the activations now
+        # === start new code
+        wes = np.dot(Wex, x)
+        z = np.row_stack((h, wes))
+        # gates
+        f = sigmoid(np.dot(Wf, z) + bf)
+        i = sigmoid(np.dot(Wi, z) + bi)
+        c_ = np.tanh(np.dot(Wc, z) + bc)
+        o = sigmoid(np.dot(Wo, z) + bo)
+        # memory update
+        c = f * c +  i * c_
+        # hidden state update and output
+        h = o * np.tanh(c)
+        y = np.dot(Why, h) + by
+        # === end
 
-        p = np.exp(y) / np.sum(np.exp(y))
+        p = np.exp(y) / np.sum(np.exp(y)) # p = softmax(o)
         ix = np.random.choice(range(vocab_size), p=p.ravel())
 
         index = ix
