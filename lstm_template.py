@@ -276,6 +276,8 @@ def backward(activations, clipping=True):
     if clipping:
         for dparam in [dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby]:
             np.clip(dparam, -1, 1, out=dparam)
+        for dparam in [dz, dhnext, dcnext, dL_do, dL_di, dL_dc_, dL_df, dL_dwes, dL_dy]: # added 
+            np.clip(dparam, -1, 1, out=dparam)
 
     gradients = (dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby)
 
