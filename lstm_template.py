@@ -6,6 +6,8 @@ BSD License
 import numpy as np
 from random import uniform
 import sys
+import joblib
+
 
 ###
 # np.seterr(all='warn')
@@ -73,6 +75,9 @@ bc = np.zeros((hidden_size, 1))  # memory bias
 # Output layer parameters
 Why = np.random.randn(vocab_size, hidden_size) * std  # hidden to output
 by = np.random.randn(vocab_size, 1) * std  # output bias
+
+#OPTIONAL: Load pretrained weights and biases
+Wf, Wi, Wo, Wc, bf, bi, bo, bc, Wex, Why, by = joblib.load("weights_and_biases.joblib")
 
 data_stream = np.asarray([char_to_ix[char] for char in data])
 print(data_stream.shape)
@@ -274,7 +279,7 @@ def backward(activations, clipping=True):
             #for dparam in [dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby]:
             #    np.clip(dparam, -1, 1, out=dparam)
             for dparam in [dz, dhnext, dcnext, dL_do, dL_di, dL_dc_, dL_df, dL_dwes, dL_dy]: # added 
-                np.clip(dparam, -5, 5, out=dparam)
+                np.clip(dparam, -20, 20, out=dparam)
 
         # === end
 
@@ -282,7 +287,7 @@ def backward(activations, clipping=True):
     # clip to mitigate exploding gradients
     if clipping:
         for dparam in [dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby]:
-            np.clip(dparam, -5, 5, out=dparam)
+            np.clip(dparam, -20, 20, out=dparam)
         #for dparam in [dz, dhnext, dcnext, dL_do, dL_di, dL_dc_, dL_df, dL_dwes, dL_dy]: # added 
         #    np.clip(dparam, -1, 1, out=dparam)
 
@@ -382,6 +387,9 @@ if option == 'train':
         p += seq_length  # move data pointer
         n += 1  # iteration counter
         n_updates += 1
+
+        # Saving learned weights in a file
+        joblib.dump([Wf, Wi, Wo, Wc, bf, bi, bo, bc, Wex, Why, by], "weights_and_biases.joblib")
         if n_updates >= max_updates:
             break
 
