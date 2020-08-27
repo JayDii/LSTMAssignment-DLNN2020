@@ -201,11 +201,13 @@ def backward(activations, clipping=True):
         # and calculating directly the derivative of the loss to the output dL/dy
         dL_dy = ps[t] -  ls[t]
 
-        #scaling??? what's that actually for? => somehow lessen the impact of each run of a mini-batch (=32 runs) on the error update
-        scale = True
-        bsz = dhnext.shape[-1] # 32
-        if scale:
-            dL_dy = dL_dy / bsz
+        # scaling like in elman rnn??? what's that actually for? => lessen the impact of each run of a mini-batch (=32 runs) on the error update
+        # However, using scaling leads to too many errors in the gradcheck path...
+
+        #scale = True
+        #bsz = dhnext.shape[-1] # 32
+        #if scale:
+        #    dL_dy = dL_dy / bsz
 
         # through the output layer
         # 1. weight matrix
@@ -284,8 +286,9 @@ def backward(activations, clipping=True):
         dWex += np.dot(dL_dwes, xs[t].T)
 
         # clip to mitigate exploding gradients
-        for dparam in [dhnext, dcnext]:#, dz, dL_do, dL_di, dL_dc_, dL_df, dL_dwes, dL_dy]: # added 
-            np.clip(dparam, -20, 20, out=dparam)
+        if clipping:
+            for dparam in [dhnext, dcnext]:#, dz, dL_do, dL_di, dL_dc_, dL_df, dL_dwes, dL_dy]: # added 
+                np.clip(dparam, -5, 5, out=dparam)
 
         # === end
 
@@ -293,7 +296,7 @@ def backward(activations, clipping=True):
     # clip to mitigate exploding gradients
     if clipping:
         for dparam in [dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby]:
-            np.clip(dparam, -20, 20, out=dparam)
+            np.clip(dparam, -5, 5, out=dparam)
 
     gradients = (dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby)
 
