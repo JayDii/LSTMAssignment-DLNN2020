@@ -203,7 +203,6 @@ def backward(activations, clipping=True):
 
         # scaling like in elman rnn??? what's that actually for? => lessen the impact of each run of a mini-batch (=32 runs) on the error update
         # However, using scaling leads to too many errors in the gradcheck path...
-
         #scale = True
         #bsz = dhnext.shape[-1] # 32
         #if scale:
